@@ -83,6 +83,11 @@ public class ItemListFragment extends ListFragment {
     private List<Contenido> rowItems;
     Contenido nuevoIngrediente=null;
 
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
@@ -111,6 +116,10 @@ public class ItemListFragment extends ListFragment {
             rowItems.add(new Contenido("Caldo","200","ml"));
 */
 
+        introducirDatosLista();
+    }
+
+    public void introducirDatosLista() {
         try {
             BD=new DBHelper(getActivity());
             BD.openDataBase();
@@ -185,15 +194,19 @@ public class ItemListFragment extends ListFragment {
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             public boolean onMenuItemClick(MenuItem item) {
                 String ingrediente = rowItems.get(position).getItemIngrediente();
-                Toast.makeText(getActivity(),"You Clicked : " + item.getTitle() + " Para: "+ingrediente,Toast.LENGTH_SHORT).show();
+                Toast.makeText(getActivity(),"Ha seleccionado: " + item.getTitle() + " Para: "+ingrediente,Toast.LENGTH_SHORT).show();
                 BD=new DBHelper(getActivity());
+
+                if(item.getTitle().equals("Borrar")){
                 try {
                     BD.openDataBase();
                     BD.borrar_ingrediente_receta(ingrediente);
+                    introducirDatosLista();
+                    adapter.notifyDataSetChanged();
                     BD.close();
                 } catch (SQLException e) {
                     e.printStackTrace();
-                }
+                }}
                 return true;
             }
         });
@@ -239,6 +252,11 @@ public class ItemListFragment extends ListFragment {
         int duration = Toast.LENGTH_LONG;
         Toast toast = Toast.makeText(context, "Desde ListFragment"+ingrediente, duration);
         toast.show();
+    }
+
+    public void actualizarLista(){
+        introducirDatosLista();
+        adapter.notifyDataSetChanged();
     }
 
 }

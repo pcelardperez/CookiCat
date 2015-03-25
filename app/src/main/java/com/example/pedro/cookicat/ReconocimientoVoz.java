@@ -5,6 +5,7 @@ import android.support.v4.app.Fragment;
 import android.content.Intent;
 import android.speech.RecognizerIntent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,8 +23,8 @@ public class ReconocimientoVoz extends Fragment {
     private static final int RESULT_OK = -1;
     private Button bt_start;
     private ArrayList<String> ingredientes;
-    private Vector<String> cantidades;
-    private Vector<String> unidades;
+    private ArrayList<String> cantidades = new ArrayList<>();
+    private ArrayList<String> unidades= new ArrayList<>();
 
     private DBHelper BD;
 
@@ -56,6 +57,7 @@ public class ReconocimientoVoz extends Fragment {
         //Recogemos todos los ingredientes, cantidades y unidades en los vectores
         try {
             getDatos();
+            poblarCantidades_Unidades();
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -71,10 +73,14 @@ public class ReconocimientoVoz extends Fragment {
         // Definición del intent para realizar en análisis del mensaje
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         // Indicamos el modelo de lenguaje para el intent
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        //intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es");
+        //intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "es");
+        //intent.putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE,"es");
+
         // Definimos el mensaje que aparecerá
-        intent.putExtra(RecognizerIntent.EXTRA_PROMPT,"Diga, Añadir...");
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT,"Diga, Añadir o Borrar... ingrediente");
         // Lanzamos la actividad esperando resultados
         startActivityForResult(intent, VOICE_RECOGNITION_REQUEST_CODE);
     }
@@ -94,14 +100,52 @@ public class ReconocimientoVoz extends Fragment {
             if(palabras[0].equals("añadir")){
                 int noenc=0;
                 for(int a=0;a<ingredientes.size();a++){
-                    //Busco el nombre que es la tercera posicion (LLAMAR A LORENA)
+                    //Busco el nombre
 
-                    if(ingredientes.get(a).equalsIgnoreCase(palabras[1])){
+                    int cant=0;
+                    String uni="";
+
+                    //Comprobamos los ingredientes
+                    if(ingredientes.get(a).equalsIgnoreCase(palabras[4])){
                         noenc=1;
-                        //Si la encuentra recojo el numero telf en el otro
-                        //vector que coincidira con la posicion ya que
-                        //los hemos rellenado a la vez.
+
+
+                        //Comprobamos las cantidades
+                        for(int x=0;x<cantidades.size();x++) {
+                            if(palabras[1].equalsIgnoreCase("dos")){
+
+                                cant=2;
+
+                            }else if(palabras[1].equalsIgnoreCase("un")){
+
+                                cant=1;
+
+                            }else if (cantidades.get(x).equalsIgnoreCase(palabras[1])) {
+                                cant = Integer.parseInt(cantidades.get(x));
+
+                            }
+
+
+                        }
+
+                        //Comprobamos las unidades de medida
+                        for(int z=0;z<unidades.size();z++){
+                            if(unidades.get(z).equalsIgnoreCase(palabras[2])){
+                                uni=conversorUnidades(unidades.get(z));
+                            }
+
+                        }
+
+
                         showToast(ingredientes.get(a).toString());
+                        try {
+                            BD.openDataBase();
+                            BD.insertar_ingrediente_receta(ingredientes.get(a).toString(), cant, uni);
+                            ItemListFragment lista= (ItemListFragment) getFragmentManager().findFragmentById(R.id.item_list);
+                            lista.actualizarLista();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
                         //ENVIAMOS LOS DATOS AL ITEMLISTACTIVITY
                         /*
                         Intent intent = new Intent(getActivity(), ItemListActivity.class);
@@ -110,8 +154,29 @@ public class ReconocimientoVoz extends Fragment {
                         getActivity().startActivity(intent);
                         */
                         break;
-                    }else{
-                        //showToast("Por favor repita la palabra...MIAU!");
+                    }
+                }
+
+                if(noenc==0){
+                    showToast("Por favor repita la palabra...MIAU!");
+                }
+            }else if(palabras[0].equals("borrar")){
+                int noenc=0;
+                for(int a=0;a<ingredientes.size();a++){
+                    //Busco el nombre que es la tercera posicion (LLAMAR A LORENA)
+
+                    if(ingredientes.get(a).equalsIgnoreCase(palabras[1])){
+                        noenc=1;
+                        showToast(ingredientes.get(a).toString());
+                        try {
+                            BD.openDataBase();
+                            BD.borrar_ingrediente_receta(ingredientes.get(a).toString());
+                            ItemListFragment lista= (ItemListFragment) getFragmentManager().findFragmentById(R.id.item_list);
+                            lista.actualizarLista();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+                        break;
                     }
                 }
 
@@ -138,20 +203,6 @@ public class ReconocimientoVoz extends Fragment {
         BD=new DBHelper(getActivity());
         BD.openDataBase();
 
-        //Insertamos una nueva alarma con valores _id=1, alarma=1, evento=1
-        //BD.insertAlarma(1, 1, 1);
-
-        //Modificamos la alarma anterior dejándola como _id=1, alarma=2, evento=3
-        //BD.updateAlarma(1, 2, 3);
-
-        //Obtenemos la alarma creada anteriormente
-        //Alarma alarma = BD.getAlarma(1);
-
-        //Borramos la alarma creada anteriormente con índice 1
-        //BD.removeAlarma(1)
-
-        //Obtenemos un listado de todas las alarmas
-
         ingredientes =(ArrayList<String>) BD.getIngredientes();
 
         ArrayList <String> pruebaingredientes= (ArrayList<String>) BD.getIngredientes();
@@ -173,6 +224,62 @@ public class ReconocimientoVoz extends Fragment {
             }
         }
 
+    public void poblarCantidades_Unidades(){
+        for(int i=0;i<1000;i++) {
+            cantidades.add(String.valueOf(i));
+        }
+
+
+        unidades.add("unidad");
+        unidades.add("unidades");
+        unidades.add("gramos");
+        unidades.add("miligramos");
+        unidades.add("litro");
+        unidades.add("litros");
+        unidades.add("choyas");
+        unidades.add("pechugas");
+        unidades.add("filetes");
+
+    }
+    public String conversorUnidades(String uni){
+
+
+        switch(uni){
+            case "unidad":
+                return "ud";
+
+            case "unidades":
+                return "uds";
+
+            case "gramos":
+                return "grms";
+
+            case "miligramos":
+                return "mgrms";
+
+            case "kilo":
+                return "kg";
+
+            case "kilos":
+                return "kg";
+
+            case "litro":
+                return "litro";
+
+            case "litros":
+                return "litros";
+
+            case "chollas":
+                return "chollas";
+
+            case "pechugas":
+                return "pechugas";
+
+            case "filetes":
+                return "filetes";
+        }
+        return "cero";
+    }
 
 
 

@@ -147,16 +147,18 @@ public class ItemListActivity extends FragmentActivity
     }
 
     public void reiniciarFragmentLista(){
+        /*
         Log.d("midebug", "Iniciamos el reinicio del fragment lista");
-        Bundle arguments = new Bundle();
+        //Bundle arguments = new Bundle();
         ItemListFragment fragment = new ItemListFragment();
         Log.d("midebug", "Instanciado el fragment");
-        fragment.setArguments(arguments);
+        //fragment.setArguments(arguments);
         Log.d("midebug", "Terminado el setArguments");
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.item_list, fragment)
                 .commit();
         Log.d("midebug", "Finalizamos el reinicio del fragment lista");
+        */
     }
 
 }

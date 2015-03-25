@@ -1,5 +1,6 @@
 package com.example.pedro.cookicat;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -10,6 +11,7 @@ import android.util.Log;
 import com.example.pedro.cookicat.dummy.Contenido;
 import com.example.pedro.cookicat.dummy.Ingrediente;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,7 +52,8 @@ public class DBHelper extends SQLiteOpenHelper {
      * */
     public void createDataBase() throws IOException {
 
-        boolean dbExist = checkDataBase();
+        File dbFile = myContext.getDatabasePath(DB_NAME);
+        Boolean dbExist = dbFile.exists();
                 //checkDataBase();
 
         if (dbExist) {
@@ -230,15 +233,41 @@ public class DBHelper extends SQLiteOpenHelper {
     }
 
     public void borrar_ingrediente_receta(String ingr){
-        if(myDataBase.delete("contenido_recetas", "id_ingrediente=13",null)==0){
-            Log.d("midebug", "No se ha borrado ingrediente");
-        }else{
-            Log.d("midebug", "Ingrediente borrado");
+        Cursor codigo = myDataBase.rawQuery("SELECT _id_ingrediente FROM ingredientes where nombre='"+ingr+"'",null);
+        if (codigo.moveToFirst()) {
+            String cod = codigo.getString(0);
+            if (myDataBase.delete("contenido_recetas", "id_ingrediente=" + cod + "", null) == 0) {
+                Log.d("midebug", "No se ha borrado ingrediente");
+            } else {
+                Log.d("midebug", "Ingrediente borrado");
+            }
         }
-        myDataBase.close();
+
         ItemListActivity LA = new ItemListActivity();
-        LA.reiniciarFragmentLista();
+        this.getReceta();
 
         //return myDataBase.delete("contenido_recetas","id_ingrediente"+"="+1,null )>0;
     }
+
+    public void insertar_ingrediente_receta(String ingr, int cantidad, String unidad){
+
+        Cursor codigo = myDataBase.rawQuery("SELECT _id_ingrediente FROM ingredientes where nombre='"+ingr+"'",null);
+        if (codigo.moveToFirst()) {
+            String cod = codigo.getString(0);
+
+        ContentValues newValues = new ContentValues();
+
+        newValues.put("unidad", unidad);
+        newValues.put("cantidad", cantidad);
+        newValues.put("id_receta", 1);
+        newValues.put("id_ingrediente", cod);
+
+        if(myDataBase.insert("contenido_recetas", null, newValues)!=-1){
+            Log.d("midebug", "Ingrediente insertado");
+        }else{
+            Log.d("midebug", "Error al insertar ingrediente");
+        }
+        }
+    }
+
 }
